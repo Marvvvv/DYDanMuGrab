@@ -18,7 +18,7 @@ public class KeepAlive extends Thread {
         while (client.getReadyFlag()) {
             client.keepAlive();
             try {
-                Thread.sleep(45000);
+                Thread.sleep(42000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

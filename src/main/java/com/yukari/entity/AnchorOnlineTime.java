@@ -7,11 +7,14 @@ import java.io.Serializable;
 
 @Getter
 @Setter
-public class AnchorOnline implements Serializable {
+public class AnchorOnlineTime implements Serializable {
 
     private Integer id;
     private Integer room_id;
+    private String onlineTime;
+    private String offlineTime;
+    private String online_length;
     private Integer online_status;
-    private String date;
 
 }
+

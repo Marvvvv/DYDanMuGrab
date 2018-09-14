@@ -1,5 +1,6 @@
 package com.yukari.service;
 
+import java.text.ParseException;
 import java.util.Map;
 
 public interface MsgService {
@@ -10,7 +11,7 @@ public interface MsgService {
 
     void enterMsgHandle(Map<String, Object> msg);
 
-    void anchorOnlineMsgHandle(Map<String, Object> msg);
+    void anchorOnlineMsgHandle(Map<String, Object> msg) throws ParseException;
 
     void bigBulletMsgHandle(Map<String, Object> msg);
 

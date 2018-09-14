@@ -11,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +23,7 @@ public class MsgServiceImpl implements MsgService {
     @Autowired
     UEnterMapper uEnterMapper;
     @Autowired
-    AnchorOnlineMapper anchorOnlineMapper;
+    AnchorOnlineTimeMapper anchorOnlineTimeMapper;
     @Autowired
     GiftRadioMapper giftRadioMapper;
     @Autowired
@@ -138,15 +139,30 @@ public class MsgServiceImpl implements MsgService {
 
     @Override
     // 开关播消息
-    public void anchorOnlineMsgHandle(Map<String, Object> msg) {
-        AnchorOnline anchorOnline = new AnchorOnline();
-        anchorOnline.setRoom_id(Integer.parseInt(msg.get("rid").toString()));
-        anchorOnline.setOnline_status(Integer.parseInt(msg.get("ss").toString()));
-        anchorOnline.setDate(anchorOnline.getOnline_status() == 1?sdf.format(System.currentTimeMillis()):
-                sdf.format(Long.valueOf(msg.get("endtime").toString()) * 1000));
+    public void anchorOnlineMsgHandle(Map<String, Object> msg) throws ParseException {
+
         // 修改开播状态
-        GlobalCache.getGlobalCache().setOnline(anchorOnline.getOnline_status() == 1);
-        anchorOnlineMapper.insert(anchorOnline);
+        GlobalCache.getGlobalCache().setOnline("1".equals(msg.get("ss").toString()));
+        if ("1".equals(msg.get("ss").toString())) {
+            // 开播信息 ，插入新纪录，房间id、开播时间、开播状态
+            AnchorOnlineTime act = new AnchorOnlineTime();
+            act.setRoom_id(Integer.parseInt(msg.get("rid").toString()));
+            act.setOnline_status(Integer.parseInt(msg.get("ss").toString()));
+            act.setOnlineTime(sdf.format(System.currentTimeMillis()));
+            anchorOnlineTimeMapper.insert(act);
+        } else {
+            // 关播信息 , update ： 关播时间、直播时长、开播状态
+            AnchorOnlineTime act = anchorOnlineTimeMapper.getLast();
+            act.setOfflineTime(sdf.format(Long.valueOf(msg.get("endtime").toString()) * 1000));
+            act.setOnline_status(Integer.parseInt(msg.get("ss").toString()));
+            // 计算直播时长
+            String onlineTime = act.getOnlineTime().substring(0,act.getOnlineTime().indexOf(".0"));
+            long mss = (Long.valueOf(msg.get("endtime").toString()) * 1000) - sdf.parse(onlineTime).getTime();
+            act.setOnline_length(formatDuring(mss));
+            anchorOnlineTimeMapper.updateOnlineTime(act);
+        }
+
+
     }
 
     @Override
@@ -177,7 +193,8 @@ public class MsgServiceImpl implements MsgService {
             radio.setGiveName(giftRadio.getGiver());
             radio.setAchorName(giftRadio.getAnchor_name());
             radio.setRadioType(1);
-            radio.setDate(System.currentTimeMillis()+"");
+            radio.setDate(giftRadio.getDate());
+            radio.setGift_src(getGiftSrc(radio.getGift_name()));
             radioMQSender.send(radio);
         }
     }
@@ -238,10 +255,11 @@ public class MsgServiceImpl implements MsgService {
                 RadioMQModel radio = new RadioMQModel();
                 radio.setRadioType(2);
                 radio.setGift_name(nobleHistory.getNoble_name());
-                radio.setDate(System.currentTimeMillis()+"");
+                radio.setDate(nobleHistory.getDate());
                 radio.setRoomId(nobleHistory.getRoom_id());
                 radio.setAchorName(nobleHistory.getAnchor_name());
                 radio.setGiveName(nobleHistory.getUname());
+                radio.setGift_src(getGiftSrc(radio.getGift_name()));
                 radioMQSender.send(radio);
             }
 
@@ -282,6 +300,44 @@ public class MsgServiceImpl implements MsgService {
             default:
                 return "游侠";
         }
+    }
+
+
+    private String getGiftSrc (String giftName) {
+        switch (giftName) {
+            case "宇宙飞船":
+                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1808/e3c721e141e90298161653753332ef7d.gif";
+            case "超级火箭":
+                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1707/c3f3f69e1fdc4f9b2c02a7bcd30334eb.gif";
+            case "火箭":
+                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1606/39b578b3cb8645b54f9a1001c392a237.gif";
+            case "飞机":
+                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1606/93daef170894a9d6bd8495fa0f81e165.gif";
+            case "超大丸星":
+                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1804/03eafee1008ecd0c568a41357c12f082.gif";
+            case "骑士":
+                return "https://res.douyucdn.cn/resource/2017/09/16/common/2804bf974a63ddf64f77942a56392a32.png";
+            case "子爵":
+                return "https://res.douyucdn.cn/resource/2017/09/16/common/06db8debe9fa16787586998b2498701a.png";
+            case "伯爵":
+                return "https://res.douyucdn.cn/resource/2017/09/16/common/17392efa63400c410947c5a69ff1cc35.gif";
+            case "公爵":
+                return "https://res.douyucdn.cn/resource/2017/09/16/common/534e34cbcfab5f62744e7ee89d946410.gif";
+            case "国王":
+                return "https://res.douyucdn.cn/resource/2017/09/16/common/0f0cecdc2a8b42727f59d0f07a571712.gif";
+            case "皇帝":
+                return "https://res.douyucdn.cn/resource/2017/09/16/common/59853156e3274457ac3bc9f837c287c7.gif";
+            default:
+                return "";
+        }
+    }
+
+
+    // 毫秒转换为XX小时XX分钟
+    private String formatDuring (long mss){
+        long hours = mss / (1000 * 60 * 60);
+        long minutes = (mss % (1000 * 60 * 60)) / (1000 * 60);
+        return hours + "小时" + minutes +"分钟";
     }
 
 
