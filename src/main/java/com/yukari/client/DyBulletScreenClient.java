@@ -220,7 +220,7 @@ public class DyBulletScreenClient {
         if (this.socket != null) {
             logger.info("重新获取弹幕服务器...");
             setReadyFlag(false);
-            init(this.room_id,-9999);
+            getInstance().init(this.room_id,-9999);
         }
     }
 

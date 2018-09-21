@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +35,8 @@ public class MsgServiceImpl implements MsgService {
     BulletHistoryMapper bulletHistoryMapper;
     @Autowired
     NobleHistoryMapper nobleHistoryMapper;
+    @Autowired
+    GiftInfoMapper giftInfoMapper;
 
     private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private List<UEnter> uEnters = new ArrayList<>(); // 节省资源，用来批量插入
@@ -194,7 +197,7 @@ public class MsgServiceImpl implements MsgService {
             radio.setAchorName(giftRadio.getAnchor_name());
             radio.setRadioType(1);
             radio.setDate(giftRadio.getDate());
-            radio.setGift_src(getGiftSrc(radio.getGift_name()));
+            radio.setGift_src(getGiftSrc(giftRadio.getGift_id()));
             radioMQSender.send(radio);
         }
     }
@@ -259,7 +262,7 @@ public class MsgServiceImpl implements MsgService {
                 radio.setRoomId(nobleHistory.getRoom_id());
                 radio.setAchorName(nobleHistory.getAnchor_name());
                 radio.setGiveName(nobleHistory.getUname());
-                radio.setGift_src(getGiftSrc(radio.getGift_name()));
+                radio.setGift_src(rtnNobleSrc(radio.getGift_name()));
                 radioMQSender.send(radio);
             }
 
@@ -303,18 +306,34 @@ public class MsgServiceImpl implements MsgService {
     }
 
 
-    private String getGiftSrc (String giftName) {
-        switch (giftName) {
-            case "宇宙飞船":
-                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1808/e3c721e141e90298161653753332ef7d.gif";
-            case "超级火箭":
-                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1707/c3f3f69e1fdc4f9b2c02a7bcd30334eb.gif";
-            case "火箭":
-                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1606/39b578b3cb8645b54f9a1001c392a237.gif";
-            case "飞机":
-                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1606/93daef170894a9d6bd8495fa0f81e165.gif";
-            case "超大丸星":
-                return "https://staticlive.douyucdn.cn/storage/webpic_resources/upload/dygift/1804/03eafee1008ecd0c568a41357c12f082.gif";
+    private String getGiftSrc (Integer giftId) {
+        Map<Integer,GiftInfo> giftInfoMap = GlobalCache.getGlobalCache().getGiftInfoCache();
+        if (giftInfoMap != null && !giftInfoMap.isEmpty()) {
+            // 从缓存中拿礼物url
+            if (giftInfoMap.containsKey(giftId)) {
+                return giftInfoMap.get(giftId).getGift_gif_url();
+            }
+            return "";
+        } else {
+            // 从数据库中拿
+            Map<Integer,GiftInfo> map = new HashMap<>();
+            List<GiftInfo> giftInfos = giftInfoMapper.getAllGift();
+            for (GiftInfo info : giftInfos) {
+                map.put(info.getGift_id(),info);
+            }
+            GlobalCache.getGlobalCache().setGiftInfoCache(map);
+            if (map.containsKey(giftId)) {
+                return map.get(giftId).getGift_gif_url();
+            }
+            return "";
+        }
+    }
+
+
+    private String rtnNobleSrc (String nobleName) {
+        switch (nobleName) {
+            case "游侠":
+                return "https://res.douyucdn.cn/resource/2017/09/16/common/6b12f00d675b1bf85f03c67c9c5f1b24.png";
             case "骑士":
                 return "https://res.douyucdn.cn/resource/2017/09/16/common/2804bf974a63ddf64f77942a56392a32.png";
             case "子爵":
