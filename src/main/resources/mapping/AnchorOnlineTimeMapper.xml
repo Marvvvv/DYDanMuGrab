@@ -15,7 +15,7 @@
     </update>
 
     <select id="getLast" resultType="com.yukari.entity.AnchorOnlineTime">
-        SELECT * FROM dy_anchor_onlineTime WHERE online_status = 0 ORDER BY id DESC LIMIT 0,1
+        SELECT * FROM dy_anchor_onlineTime WHERE online_status = 1 ORDER BY id DESC LIMIT 0,1
     </select>
 
 </mapper>
